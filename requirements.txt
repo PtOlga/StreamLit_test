@@ -6,7 +6,4 @@ joblib
 scikit-learn
 streamlit-drawable-canvas
 opencv-python-headless
-cv2
 gdown
-os
-
