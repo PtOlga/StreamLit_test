@@ -2,11 +2,8 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 import cv2
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import get_file
-import h5py
-import os
+import joblib
+from PIL import Image
 import matplotlib.pyplot as plt
 
 # Заголовок приложения
@@ -14,9 +11,7 @@ st.title("Рисуйте цифру, а модель её распознает!"
 
 # Загрузка модели
 try:
-    url = 'https://drive.google.com/uc?id=1AyPDoibUsYhx1CnFkFouPh_fIy0pXpB5'
-    model_path = get_file('model.h5', url)
-    model = load_model(model_path)
+    model = joblib.load("best_model_rf.joblib")
     st.success("Модель успешно загружена!")
 except Exception as e:
     st.error(f"Ошибка при загрузке модели: {e}")
@@ -49,10 +44,10 @@ if canvas_result.image_data is not None:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = image.astype('float32') / 255.0
         image = 1 - image  # Инвертируем цвета
-        image = image.reshape(1, 28, 28, 1)  # Подготовка для модели
+        image = image.reshape(1, -1)  # Преобразуем в 1D-массив для модели
 
         # Предсказание с использованием модели
-        predictions = model.predict(image)
+        predictions = model.predict_proba(image)[0]
         predicted_digit = np.argmax(predictions)
         confidence = np.max(predictions) * 100
 
@@ -72,7 +67,7 @@ if canvas_result.image_data is not None:
         # Гистограмма распределения вероятностей
         st.subheader("Распределение вероятностей")
         fig, ax = plt.subplots()
-        ax.bar(range(10), predictions[0])
+        ax.bar(range(10), predictions)
         ax.set_xlabel("Цифра")
         ax.set_ylabel("Вероятность")
         ax.set_xticks(range(10))
