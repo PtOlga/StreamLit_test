@@ -3,15 +3,30 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 import cv2
 import joblib
-from PIL import Image
+import gdown
+import os
 import matplotlib.pyplot as plt
 
 # Заголовок приложения
 st.title("Рисуйте цифру, а модель её распознает!")
 
-# Загрузка модели
+# URL модели на Google Drive
+url = 'https://drive.google.com/uc?id=ВАШ_ИДЕНТИФИКАТОР_ФАЙЛА'  # <- Замените на реальный ID файла!
+model_path = 'best_model_rf.joblib'
+
+# Загрузка модели с Google Drive
+if not os.path.exists(model_path):
+    try:
+        st.write("Скачивание модели...")
+        gdown.download(url, model_path, quiet=False)
+        st.success("Модель успешно скачана!")
+    except Exception as e:
+        st.error(f"Ошибка скачивания модели: {e}")
+        st.stop()
+
+# Загрузка модели в память
 try:
-    model = joblib.load("best_model_rf.joblib")
+    model = joblib.load(model_path)
     st.success("Модель успешно загружена!")
 except Exception as e:
     st.error(f"Ошибка при загрузке модели: {e}")
@@ -39,14 +54,14 @@ canvas_result = st_canvas(
 # Обработка нарисованного изображения
 if canvas_result.image_data is not None:
     try:
-        # Преобразуем изображение в черно-белое и изменяем размер
+        # Преобразуем изображение для модели
         image = cv2.resize(canvas_result.image_data.astype('uint8'), (28, 28))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = image.astype('float32') / 255.0
         image = 1 - image  # Инвертируем цвета
-        image = image.reshape(1, -1)  # Преобразуем в 1D-массив для модели
+        image = image.reshape(1, -1)  # Преобразуем в 1D-массив
 
-        # Предсказание с использованием модели
+        # Предсказание
         predictions = model.predict_proba(image)[0]
         predicted_digit = np.argmax(predictions)
         confidence = np.max(predictions) * 100
@@ -64,7 +79,7 @@ if canvas_result.image_data is not None:
             st.markdown(f"**Цифра:** {predicted_digit}")
             st.markdown(f"**Уверенность:** {confidence:.2f}%")
 
-        # Гистограмма распределения вероятностей
+        # Гистограмма
         st.subheader("Распределение вероятностей")
         fig, ax = plt.subplots()
         ax.bar(range(10), predictions)
@@ -74,4 +89,4 @@ if canvas_result.image_data is not None:
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Ошибка при обработке изображения: {e}")
+        st.error(f"Ошибка при обработке: {e}")
