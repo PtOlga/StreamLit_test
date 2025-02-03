@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 # Заголовок приложения
 st.title("Рисуйте цифру, а модель её распознает!")
 
-# URL модели на Google Drive
-url = 'https://drive.google.com/uc?id=ВАШ_ИДЕНТИФИКАТОР_ФАЙЛА'  # <- Замените на реальный ID файла!
+# URL модели на Google Drive (ЗАМЕНИТЕ НА ВАШ ID!)
+url = 'https://drive.google.com/uc?id=1AyPDoibUsYhx1CnFkFouPh_fIy0pXpB5'
 model_path = 'best_model_rf.joblib'
 
 # Загрузка модели с Google Drive
@@ -19,17 +19,17 @@ if not os.path.exists(model_path):
     try:
         st.write("Скачивание модели...")
         gdown.download(url, model_path, quiet=False)
-        st.success("Модель успешно скачана!")
+        st.success("Модель скачана!")
     except Exception as e:
-        st.error(f"Ошибка скачивания модели: {e}")
+        st.error(f"Ошибка скачивания: {e}")
         st.stop()
 
 # Загрузка модели в память
 try:
     model = joblib.load(model_path)
-    st.success("Модель успешно загружена!")
+    st.success("Модель загружена!")
 except Exception as e:
-    st.error(f"Ошибка при загрузке модели: {e}")
+    st.error(f"Ошибка загрузки модели: {e}")
     st.stop()
 
 # Настройки для рисования
@@ -39,7 +39,6 @@ stroke_color = st.sidebar.color_picker("Цвет линии:", "#FFFFFF")
 bg_color = st.sidebar.color_picker("Цвет фона:", "#000000")
 
 # Область для рисования
-st.sidebar.header("Область для рисования")
 canvas_result = st_canvas(
     fill_color=bg_color,
     stroke_width=stroke_width,
@@ -51,15 +50,15 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
-# Обработка нарисованного изображения
+# Обработка изображения
 if canvas_result.image_data is not None:
     try:
-        # Преобразуем изображение для модели
+        # Подготовка изображения
         image = cv2.resize(canvas_result.image_data.astype('uint8'), (28, 28))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = image.astype('float32') / 255.0
-        image = 1 - image  # Инвертируем цвета
-        image = image.reshape(1, -1)  # Преобразуем в 1D-массив
+        image = 1 - image  # Инверсия цветов
+        image = image.reshape(1, -1)  # 1D-массив
 
         # Предсказание
         predictions = model.predict_proba(image)[0]
@@ -67,7 +66,7 @@ if canvas_result.image_data is not None:
         confidence = np.max(predictions) * 100
 
         # Отображение результатов
-        st.header("Результаты распознавания")
+        st.header("Результаты")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -75,11 +74,11 @@ if canvas_result.image_data is not None:
             st.image(image.reshape(28, 28), width=150)
 
         with col2:
-            st.subheader("Предсказание модели")
+            st.subheader("Предсказание")
             st.markdown(f"**Цифра:** {predicted_digit}")
             st.markdown(f"**Уверенность:** {confidence:.2f}%")
 
-        # Гистограмма
+        # Гистограмма вероятностей
         st.subheader("Распределение вероятностей")
         fig, ax = plt.subplots()
         ax.bar(range(10), predictions)
@@ -89,4 +88,4 @@ if canvas_result.image_data is not None:
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Ошибка при обработке: {e}")
+        st.error(f"Ошибка: {e}")
