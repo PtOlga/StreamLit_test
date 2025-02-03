@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 import cv2
-import joblib
+import pickle  # Используем pickle вместо joblib
 import gdown
 import os
 import matplotlib.pyplot as plt
@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 # Заголовок приложения
 st.title("Рисуйте цифру, а модель её распознает!")
 
-# URL модели на Google Drive (ЗАМЕНИТЕ НА ВАШ ID!)
-url = 'https://drive.google.com/uc?id=1AyPDoibUsYhx1CnFkFouPh_fIy0pXpB5'
-model_path = 'best_model_rf.joblib'
+# URL модели на Google Drive
+url = 'https://drive.google.com/uc?id=1BAJH_MFg6hcs_x_IB6rb-aO_Zfb3kiyy'
+model_path = 'best_model.pkl'
 
 # Загрузка модели
 if not os.path.exists(model_path):
@@ -25,7 +25,8 @@ if not os.path.exists(model_path):
         st.stop()
 
 try:
-    model = joblib.load(model_path)
+    with open(model_path, 'rb') as f:  # Загрузка через pickle
+        model = pickle.load(f)
     st.success("Модель загружена!")
 except Exception as e:
     st.error(f"Ошибка загрузки модели: {e}")
@@ -34,8 +35,8 @@ except Exception as e:
 # Настройки для рисования
 st.sidebar.header("Настройки")
 stroke_width = st.sidebar.slider("Толщина линии:", 1, 25, 10)
-bg_color = st.sidebar.color_picker("Цвет фона:", "#FFFFFF")  # Белый фон
-stroke_color = st.sidebar.color_picker("Цвет линии:", "#000000")  # Черная цифра
+bg_color = st.sidebar.color_picker("Цвет фона:", "#FFFFFF")
+stroke_color = st.sidebar.color_picker("Цвет линии:", "#000000")
 
 # Область для рисования
 canvas_result = st_canvas(
@@ -52,16 +53,14 @@ canvas_result = st_canvas(
 # Обработка изображения
 if canvas_result.image_data is not None:
     try:
-        # 1. Конвертируем в grayscale и ресайзим до 28x28
+        # Преобразование изображения
         image = cv2.resize(cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY), (28, 28))
+        image = image.astype('float32') / 255.0
         
-        # 2. Инверсия не нужна - фон уже белый, цифра черная
-        image = image.astype('float32') / 255.0  # Нормализация [0, 1]
-        
-        # 3. Бинаризация для четкого разделения фона и цифры
+        # Бинаризация
         _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
         
-        # 4. Подготовка для модели
+        # Подготовка для модели
         image_flat = image.reshape(1, -1)
 
         # Предсказание
@@ -75,7 +74,7 @@ if canvas_result.image_data is not None:
 
         with col1:
             st.subheader("Нарисованная цифра")
-            st.image(image, clamp=True, width=150)  # clamp гарантирует [0,1]
+            st.image(image, clamp=True, width=150)
 
         with col2:
             st.subheader("Предсказание")
