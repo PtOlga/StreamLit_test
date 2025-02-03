@@ -2,36 +2,18 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 import cv2
-import pickle  # Используем pickle
-import gdown
-import os
+import pickle
 import matplotlib.pyplot as plt
-from scipy.ndimage import center_of_mass  # Для центрирования цифры
+from scipy.ndimage import center_of_mass
 
 # Заголовок приложения
 st.title("Рисуйте цифру, а модель её распознает!")
 
-# URL модели на Google Drive
-url = 'https://drive.google.com/uc?id=1BAJH_MFg6hcs_x_IB6rb-aO_Zfb3kiyy'
-model_path = 'best_model.pkl'
-
 # Загрузка модели
-if not os.path.exists(model_path):
-    try:
-        st.write("Скачивание модели...")
-        gdown.download(url, model_path, quiet=False)
-        st.success("Модель скачана!")
-    except Exception as e:
-        st.error(f"Ошибка скачивания: {e}")
-        st.stop()
-
-try:
-    with open(model_path, 'rb') as f:
-        model = pickle.load(f)
-    st.success("Модель загружена!")
-except Exception as e:
-    st.error(f"Ошибка загрузки модели: {e}")
-    st.stop()
+model_path = 'best_model.pkl'
+with open(model_path, 'rb') as f:
+    model = pickle.load(f)
+st.success("Модель загружена!")
 
 # Настройки для рисования
 st.sidebar.header("Настройки")
@@ -51,7 +33,7 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
-# Функция центрирования изображения
+# Функция для центрирования изображения
 def center_image(img):
     cy, cx = center_of_mass(img)
     rows, cols = img.shape
@@ -63,28 +45,28 @@ def center_image(img):
 # Обработка изображения
 if canvas_result.image_data is not None:
     try:
-        # Преобразование в ч/б и изменение размера
+        # 1. Перевод в ч/б
         image = cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY)
 
-        # Инверсия цветов (MNIST использует белую цифру на чёрном фоне)
+        # 2. Инверсия цветов (если фон белый, а цифра чёрная)
         image = cv2.bitwise_not(image)
 
-        # Нормализация значений (от 0 до 1)
-        image = image.astype('float32') / 255.0
-
-        # Центрирование цифры
+        # 3. Центрирование цифры
         image = center_image(image)
 
-        # Бинаризация (повышает чёткость границ)
-        _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
-
-        # Изменение размера до 28x28 пикселей
+        # 4. Изменение размера
         image = cv2.resize(image, (28, 28))
 
-        # Подготовка для модели
+        # 5. Нормализация
+        image = image.astype('float32') / 255.0
+
+        # 6. Бинаризация (0 и 1 вместо оттенков серого)
+        _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
+
+        # 7. Разворачивание вектор для подачи в модель
         image_flat = image.reshape(1, -1)
 
-        # Предсказание модели
+        # Предсказание
         predictions = model.predict_proba(image_flat)[0]
         predicted_digit = np.argmax(predictions)
         confidence = np.max(predictions) * 100
@@ -102,7 +84,7 @@ if canvas_result.image_data is not None:
             st.markdown(f"**Цифра:** {predicted_digit}")
             st.markdown(f"**Уверенность:** {confidence:.2f}%")
 
-        # Гистограмма предсказаний
+        # Гистограмма
         st.subheader("Распределение вероятностей")
         fig, ax = plt.subplots()
         ax.bar(range(10), predictions)
@@ -112,7 +94,7 @@ if canvas_result.image_data is not None:
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Ошибка обработки изображения: {e}")
+        st.error(f"Ошибка: {e}")
 
 # Кнопка очистки холста
 if st.button("Очистить холст"):
