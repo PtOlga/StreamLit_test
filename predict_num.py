@@ -2,10 +2,11 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 import cv2
-import pickle  # Используем pickle вместо joblib
+import pickle  # Используем pickle
 import gdown
 import os
 import matplotlib.pyplot as plt
+from scipy.ndimage import center_of_mass  # Для центрирования цифры
 
 # Заголовок приложения
 st.title("Рисуйте цифру, а модель её распознает!")
@@ -25,7 +26,7 @@ if not os.path.exists(model_path):
         st.stop()
 
 try:
-    with open(model_path, 'rb') as f:  # Загрузка через pickle
+    with open(model_path, 'rb') as f:
         model = pickle.load(f)
     st.success("Модель загружена!")
 except Exception as e:
@@ -50,20 +51,40 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
+# Функция центрирования изображения
+def center_image(img):
+    cy, cx = center_of_mass(img)
+    rows, cols = img.shape
+    shift_x = cols // 2 - int(cx)
+    shift_y = rows // 2 - int(cy)
+    M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
+    return cv2.warpAffine(img, M, (cols, rows))
+
 # Обработка изображения
 if canvas_result.image_data is not None:
     try:
-        # Преобразование изображения
-        image = cv2.resize(cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY), (28, 28))
+        # Преобразование в ч/б и изменение размера
+        image = cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY)
+
+        # Инверсия цветов (MNIST использует белую цифру на чёрном фоне)
+        image = cv2.bitwise_not(image)
+
+        # Нормализация значений (от 0 до 1)
         image = image.astype('float32') / 255.0
-        
-        # Бинаризация
+
+        # Центрирование цифры
+        image = center_image(image)
+
+        # Бинаризация (повышает чёткость границ)
         _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
-        
+
+        # Изменение размера до 28x28 пикселей
+        image = cv2.resize(image, (28, 28))
+
         # Подготовка для модели
         image_flat = image.reshape(1, -1)
 
-        # Предсказание
+        # Предсказание модели
         predictions = model.predict_proba(image_flat)[0]
         predicted_digit = np.argmax(predictions)
         confidence = np.max(predictions) * 100
@@ -81,7 +102,7 @@ if canvas_result.image_data is not None:
             st.markdown(f"**Цифра:** {predicted_digit}")
             st.markdown(f"**Уверенность:** {confidence:.2f}%")
 
-        # Гистограмма
+        # Гистограмма предсказаний
         st.subheader("Распределение вероятностей")
         fig, ax = plt.subplots()
         ax.bar(range(10), predictions)
@@ -91,7 +112,7 @@ if canvas_result.image_data is not None:
         st.pyplot(fig)
 
     except Exception as e:
-        st.error(f"Ошибка: {e}")
+        st.error(f"Ошибка обработки изображения: {e}")
 
 # Кнопка очистки холста
 if st.button("Очистить холст"):
