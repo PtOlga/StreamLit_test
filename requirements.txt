@@ -1,9 +1,6 @@
 streamlit
-numpy
-Pillow
-matplotlib
-scikit-learn
 streamlit-drawable-canvas
+numpy
 opencv-python-headless
 gdown
-pickle 
+matplotlib
