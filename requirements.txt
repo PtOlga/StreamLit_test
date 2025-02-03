@@ -1,0 +1,12 @@
+streamlit
+numpy
+Pillow
+matplotlib
+joblib
+scikit-learn
+streamlit-drawable-canvas
+tensorflow
+opencv-python-headless
+gdown
+
+
