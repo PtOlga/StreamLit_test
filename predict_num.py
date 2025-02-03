@@ -17,7 +17,7 @@ st.success("Модель загружена!")
 
 # Настройки для рисования
 st.sidebar.header("Настройки")
-stroke_width = st.sidebar.slider("Толщина линии:", 1, 25, 10)
+stroke_width = st.sidebar.slider("Толщина линии:", 10, 25, 20)
 bg_color = st.sidebar.color_picker("Цвет фона:", "#FFFFFF")
 stroke_color = st.sidebar.color_picker("Цвет линии:", "#000000")
 
