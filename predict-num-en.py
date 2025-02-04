@@ -42,60 +42,64 @@ def center_image(img):
     M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
     return cv2.warpAffine(img, M, (cols, rows))
 
-# Image processing
+# Process the image if the canvas is not empty
 if canvas_result.image_data is not None:
     try:
-        # 1. Convert to grayscale
+        # Convert canvas to grayscale image
         image = cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY)
 
-        # 2. Invert colors (if background is white and digit is black)
-        image = cv2.bitwise_not(image)
+        # Check if the image is empty (all white pixels)
+        if np.all(image == 255):  
+            st.warning("Draw a digit first!")
+        else:
+            # Invert colors if needed
+            image = cv2.bitwise_not(image)
 
-        # 3. Center the digit
-        image = center_image(image)
+            # Center the digit
+            image = center_image(image)
 
-        # 4. Resize to 28x28 pixels
-        image = cv2.resize(image, (28, 28))
+            # Resize to 28x28
+            image = cv2.resize(image, (28, 28))
 
-        # 5. Normalize pixel values
-        image = image.astype('float32') / 255.0
+            # Normalize pixel values
+            image = image.astype('float32') / 255.0
 
-        # 6. Binarization (convert to 0 and 1 instead of grayscale)
-        _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
+            # Binarization
+            _, image = cv2.threshold(image, 0.5, 1.0, cv2.THRESH_BINARY)
 
-        # 7. Flatten the image to pass it to the model
-        image_flat = image.reshape(1, -1)
+            # Flatten the image for the model
+            image_flat = image.reshape(1, -1)
 
-        # Prediction
-        predictions = model.predict_proba(image_flat)[0]
-        predicted_digit = np.argmax(predictions)
-        confidence = np.max(predictions) * 100
+            # Model prediction
+            predictions = model.predict_proba(image_flat)[0]
+            predicted_digit = np.argmax(predictions)
+            confidence = np.max(predictions) * 100
 
-        # Display results
-        st.header("Results")
-        col1, col2 = st.columns(2)
+            # Display results
+            st.header("Results")
+            col1, col2 = st.columns(2)
 
-        with col1:
-            st.subheader("Drawn Digit")
-            st.image(image, clamp=True, width=150)
+            with col1:
+                st.subheader("Drawn Digit")
+                st.image(image, clamp=True, width=150)
 
-        with col2:
-            st.subheader("Prediction")
-            st.markdown(f"**Digit:** {predicted_digit}")
-            st.markdown(f"**Confidence:** {confidence:.2f}%")
+            with col2:
+                st.subheader("Prediction")
+                st.markdown(f"**Digit:** {predicted_digit}")
+                st.markdown(f"**Confidence:** {confidence:.2f}%")
 
-        # Probability distribution chart
-        st.subheader("Probability Distribution")
-        fig, ax = plt.subplots()
-        ax.bar(range(10), predictions)
-        ax.set_xlabel("Digit")
-        ax.set_ylabel("Probability")
-        ax.set_xticks(range(10))
-        st.pyplot(fig)
+            # Probability distribution chart
+            st.subheader("Probability Distribution")
+            fig, ax = plt.subplots()
+            ax.bar(range(10), predictions)
+            ax.set_xlabel("Digit")
+            ax.set_ylabel("Probability")
+            ax.set_xticks(range(10))
+            st.pyplot(fig)
 
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Clear canvas button
+# Fix: Properly reset the canvas when clicking "Clear Canvas"
 if st.button("Clear Canvas"):
-    st.session_state.canvas = None
+    st.experimental_rerun()
