@@ -17,7 +17,7 @@ st.success("Model loaded successfully!")
 
 # Drawing settings
 st.sidebar.header("Settings")
-stroke_width = st.sidebar.slider("Line thickness:", 10, 25, 20)
+stroke_width = st.sidebar.slider("Line thickness:", 10, 25, 25)
 bg_color = st.sidebar.color_picker("Background color:", "#FFFFFF")
 stroke_color = st.sidebar.color_picker("Line color:", "#000000")
 
