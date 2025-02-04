@@ -15,11 +15,15 @@ with open(model_path, 'rb') as f:
     model = pickle.load(f)
 st.success("Model loaded successfully!")
 
-# Drawing settings
+# Sidebar settings
 st.sidebar.header("Settings")
 stroke_width = st.sidebar.slider("Line thickness:", 10, 25, 25)
 bg_color = st.sidebar.color_picker("Background color:", "#FFFFFF")
 stroke_color = st.sidebar.color_picker("Line color:", "#000000")
+
+# Initialize session state for canvas clearing
+if "canvas_key" not in st.session_state:
+    st.session_state.canvas_key = "canvas"
 
 # Drawing canvas
 canvas_result = st_canvas(
@@ -30,7 +34,7 @@ canvas_result = st_canvas(
     height=280,
     width=280,
     drawing_mode="freedraw",
-    key="canvas",
+    key=st.session_state.canvas_key,  # Dynamically update canvas key
 )
 
 # Function to center the image
@@ -45,10 +49,10 @@ def center_image(img):
 # Process the image if the canvas is not empty
 if canvas_result.image_data is not None:
     try:
-        # Convert canvas to grayscale image
+        # Convert to grayscale
         image = cv2.cvtColor(canvas_result.image_data.astype('uint8'), cv2.COLOR_BGR2GRAY)
 
-        # Check if the image is empty (all white pixels)
+        # Check if the image is empty
         if np.all(image == 255):  
             st.warning("Draw a digit first!")
         else:
@@ -100,6 +104,7 @@ if canvas_result.image_data is not None:
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Fix: Properly reset the canvas when clicking "Clear Canvas"
+# Fix: Correctly reset the canvas when clicking "Clear Canvas"
 if st.button("Clear Canvas"):
-    st.experimental_rerun()
+    st.session_state.canvas_key = str(np.random.rand())  # Generates a new key to reset canvas
+    st.rerun()
