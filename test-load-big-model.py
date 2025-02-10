@@ -4,7 +4,7 @@ import gdown
 import os
 
 url = "https://drive.google.com/uc?id=1AyPDoibUsYhx1CnFkFouPh_fIy0pXpB5"
-model_path = "model.h5"
+model_path = "best_model_rf.joblib"
 
 # Загрузить файл, если его нет
 if not os.path.exists(model_path):
