@@ -2,7 +2,6 @@ streamlit
 numpy
 Pillow
 matplotlib
-joblib
 scikit-learn
 streamlit-drawable-canvas
 opencv-python-headless
